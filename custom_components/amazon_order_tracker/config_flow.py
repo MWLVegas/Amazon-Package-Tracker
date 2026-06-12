@@ -39,6 +39,7 @@ class AmazonOrderTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
+        suggested_values = dict(user_input or {})
 
         if user_input is not None:
             settings = ImapSettings(
@@ -48,36 +49,56 @@ class AmazonOrderTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 password=user_input[CONF_PASSWORD],
                 mailbox=user_input[CONF_MAILBOX],
             )
-            login_ok = await self.hass.async_add_executor_job(test_imap_login, settings)
-            if login_ok:
+            result = await self.hass.async_add_executor_job(test_imap_login, settings)
+            if result.success:
                 await self.async_set_unique_id(user_input[CONF_USERNAME])
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title=user_input.get(CONF_NAME) or user_input[CONF_USERNAME],
                     data=user_input,
                 )
-            errors["base"] = "cannot_connect"
+            errors["base"] = result.error or "cannot_connect"
 
-        schema = vol.Schema(
-            {
-                vol.Optional(CONF_NAME, default="Amazon Orders"): str,
-                vol.Required(CONF_USERNAME): str,
-                vol.Required(CONF_PASSWORD): str,
-                vol.Optional(CONF_IMAP_SERVER, default=DEFAULT_IMAP_SERVER): str,
-                vol.Optional(CONF_IMAP_PORT, default=DEFAULT_IMAP_PORT): int,
-                vol.Optional(CONF_MAILBOX, default=DEFAULT_MAILBOX): str,
-                vol.Optional(
-                    CONF_LOOKBACK_DAYS, default=DEFAULT_LOOKBACK_DAYS
-                ): vol.All(int, vol.Range(min=1, max=365)),
-                vol.Optional(
-                    CONF_ARCHIVE_AFTER_HOURS,
-                    default=DEFAULT_ARCHIVE_AFTER_HOURS,
-                ): vol.All(int, vol.Range(min=1, max=720)),
-                vol.Optional(CONF_INCLUDE_PHARMACY, default=True): bool,
-            }
-        )
+        schema = _schema_with_defaults(suggested_values)
         return self.async_show_form(
             step_id="user",
             data_schema=schema,
             errors=errors,
         )
+
+
+def _schema_with_defaults(values: dict[str, Any]) -> vol.Schema:
+    """Build the setup form, preserving values after validation errors."""
+    return vol.Schema(
+        {
+            vol.Optional(CONF_NAME, default=values.get(CONF_NAME, "Amazon Orders")): str,
+            vol.Required(CONF_USERNAME, default=values.get(CONF_USERNAME, "")): str,
+            vol.Required(CONF_PASSWORD, default=values.get(CONF_PASSWORD, "")): str,
+            vol.Optional(
+                CONF_IMAP_SERVER,
+                default=values.get(CONF_IMAP_SERVER, DEFAULT_IMAP_SERVER),
+            ): str,
+            vol.Optional(
+                CONF_IMAP_PORT,
+                default=values.get(CONF_IMAP_PORT, DEFAULT_IMAP_PORT),
+            ): int,
+            vol.Optional(
+                CONF_MAILBOX,
+                default=values.get(CONF_MAILBOX, DEFAULT_MAILBOX),
+            ): str,
+            vol.Optional(
+                CONF_LOOKBACK_DAYS,
+                default=values.get(CONF_LOOKBACK_DAYS, DEFAULT_LOOKBACK_DAYS),
+            ): vol.All(int, vol.Range(min=1, max=365)),
+            vol.Optional(
+                CONF_ARCHIVE_AFTER_HOURS,
+                default=values.get(
+                    CONF_ARCHIVE_AFTER_HOURS, DEFAULT_ARCHIVE_AFTER_HOURS
+                ),
+            ): vol.All(int, vol.Range(min=1, max=720)),
+            vol.Optional(
+                CONF_INCLUDE_PHARMACY,
+                default=values.get(CONF_INCLUDE_PHARMACY, True),
+            ): bool,
+        }
+    )

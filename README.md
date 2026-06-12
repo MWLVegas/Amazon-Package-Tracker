@@ -42,4 +42,3 @@ This integration stores order metadata locally in Home Assistant storage. Pharma
 ## Notes
 
 Amazon email formats can vary. The parser is deliberately conservative and can be extended as your real messages reveal more patterns.
-# Amazon-Package-Tracker

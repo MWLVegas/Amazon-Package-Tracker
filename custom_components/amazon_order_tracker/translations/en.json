@@ -18,7 +18,9 @@
       }
     },
     "error": {
-      "cannot_connect": "Could not connect to Gmail with those settings."
+      "cannot_connect": "E001: Could not reach the IMAP server. Check the server name, port, and network access.",
+      "invalid_auth": "E002: Gmail rejected the email address or app password.",
+      "mailbox_not_found": "E003: Login worked, but that mailbox/folder could not be opened."
     },
     "abort": {
       "already_configured": "This Gmail account is already configured."

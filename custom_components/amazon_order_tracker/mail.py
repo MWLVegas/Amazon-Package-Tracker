@@ -9,6 +9,7 @@ from email.message import Message
 from email.policy import default
 from email.utils import parsedate_to_datetime
 import imaplib
+import socket
 from typing import Iterable
 
 
@@ -24,6 +25,14 @@ class ImapSettings:
 
 
 @dataclass(frozen=True)
+class ImapLoginTestResult:
+    """Result of testing IMAP settings."""
+
+    success: bool
+    error: str | None = None
+
+
+@dataclass(frozen=True)
 class MailMessage:
     """Minimal message payload used by parsers."""
 
@@ -34,17 +43,33 @@ class MailMessage:
     body: str
 
 
-def test_imap_login(settings: ImapSettings) -> bool:
-    """Return whether the configured IMAP login works."""
+def test_imap_login(settings: ImapSettings) -> ImapLoginTestResult:
+    """Test connection, login, and mailbox access separately."""
     try:
-        with imaplib.IMAP4_SSL(settings.server, settings.port) as client:
+        client = imaplib.IMAP4_SSL(settings.server, settings.port)
+    except (OSError, TimeoutError, socket.gaierror):
+        return ImapLoginTestResult(False, "cannot_connect")
+
+    try:
+        try:
             client.login(settings.username, settings.password)
-            client.select(settings.mailbox, readonly=True)
-        return True
-    except imaplib.IMAP4.error:
-        return False
-    except OSError:
-        return False
+        except imaplib.IMAP4.error:
+            return ImapLoginTestResult(False, "invalid_auth")
+
+        try:
+            status, _data = client.select(settings.mailbox, readonly=True)
+        except imaplib.IMAP4.error:
+            return ImapLoginTestResult(False, "mailbox_not_found")
+
+        if status != "OK":
+            return ImapLoginTestResult(False, "mailbox_not_found")
+
+        return ImapLoginTestResult(True)
+    finally:
+        try:
+            client.logout()
+        except imaplib.IMAP4.error:
+            pass
 
 
 def fetch_candidate_messages(
