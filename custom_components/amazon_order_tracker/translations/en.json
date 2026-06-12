@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Amazon Order Tracker",
+        "description": "Connect to Gmail over IMAP and scan Amazon order emails.",
+        "data": {
+          "name": "Name",
+          "username": "Gmail address",
+          "password": "App password",
+          "imap_server": "IMAP server",
+          "imap_port": "IMAP port",
+          "mailbox": "Mailbox",
+          "lookback_days": "Days of email history to scan",
+          "archive_after_hours": "Hours before delivered orders archive",
+          "include_pharmacy": "Track pharmacy orders"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to Gmail with those settings."
+    },
+    "abort": {
+      "already_configured": "This Gmail account is already configured."
+    }
+  }
+}

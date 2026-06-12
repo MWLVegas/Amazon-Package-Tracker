@@ -1,0 +1,12 @@
+{
+  "domain": "amazon_order_tracker",
+  "name": "Amazon Order Tracker",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/custom-components/amazon_order_tracker",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/custom-components/amazon_order_tracker/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
