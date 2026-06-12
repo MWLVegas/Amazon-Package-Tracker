@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5
+
+- Add diagnostic sensors for stored, archived, scanned, parsed, and newly archived records.
+- Track how many delivered orders are archived during each scan.
+
 ## 0.1.4
 
 - Load the integration before the first mailbox scan completes so slow Gmail folders do not cancel setup.

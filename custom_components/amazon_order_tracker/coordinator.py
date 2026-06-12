@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -35,6 +36,12 @@ class AmazonOrderTrackerCoordinator(DataUpdateCoordinator[dict[str, object]]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self.entry = entry
         self.store = OrderStore(hass, entry.entry_id)
+        self.last_scan: dict[str, Any] = {
+            "emails_scanned": 0,
+            "updates_parsed": 0,
+            "records_changed": 0,
+            "records_archived": 0,
+        }
         super().__init__(
             hass,
             LOGGER,
@@ -76,13 +83,21 @@ class AmazonOrderTrackerCoordinator(DataUpdateCoordinator[dict[str, object]]):
             for message in messages
             if (parsed := parse_message(message, include_pharmacy)) is not None
         ]
-        await self.store.async_merge_updates(updates, archive_after)
+        merge_stats = await self.store.async_merge_updates(updates, archive_after)
+        self.last_scan = {
+            "emails_scanned": len(messages),
+            "updates_parsed": len(updates),
+            **merge_stats,
+        }
 
         return self._stored_data()
 
     def _stored_data(self) -> dict[str, object]:
         """Return current stored data in coordinator format."""
+        counts = self.store.counts()
+        counts.update(self.last_scan)
         return {
-            "counts": self.store.counts(),
+            "counts": counts,
             "orders": self.store.active_orders(),
+            "last_scan": self.last_scan,
         }

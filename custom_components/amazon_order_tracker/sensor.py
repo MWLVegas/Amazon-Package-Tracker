@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
+    STATUS_ARCHIVED,
     STATUS_DELAYED,
     STATUS_DELIVERED,
     STATUS_LABELS,
@@ -67,6 +68,31 @@ SENSORS: tuple[AmazonOrderSensorDescription, ...] = (
         name="Pharmacy Active Orders",
         count_key="pharmacy_active",
     ),
+    AmazonOrderSensorDescription(
+        key="archived_orders",
+        name=STATUS_LABELS[STATUS_ARCHIVED],
+        count_key="archived",
+    ),
+    AmazonOrderSensorDescription(
+        key="stored_orders",
+        name="Stored Orders",
+        count_key="stored",
+    ),
+    AmazonOrderSensorDescription(
+        key="emails_scanned",
+        name="Emails Scanned Last Scan",
+        count_key="emails_scanned",
+    ),
+    AmazonOrderSensorDescription(
+        key="updates_parsed",
+        name="Updates Parsed Last Scan",
+        count_key="updates_parsed",
+    ),
+    AmazonOrderSensorDescription(
+        key="records_archived",
+        name="Archived Last Scan",
+        count_key="records_archived",
+    ),
 )
 
 
@@ -113,9 +139,15 @@ class AmazonOrderCountSensor(
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Expose active order details on the aggregate sensor."""
-        if self.entity_description.key != "active_orders":
-            return {}
+        """Expose useful details on diagnostic sensors."""
         if not self.coordinator.data:
+            return {}
+        if self.entity_description.key != "active_orders":
+            if self.entity_description.key in {
+                "emails_scanned",
+                "updates_parsed",
+                "records_archived",
+            }:
+                return {"last_scan": self.coordinator.data.get("last_scan", {})}
             return {}
         return {"orders": self.coordinator.data.get("orders", [])}

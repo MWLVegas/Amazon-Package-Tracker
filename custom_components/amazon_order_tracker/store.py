@@ -35,15 +35,17 @@ class OrderStore:
 
     async def async_merge_updates(
         self, updates: list[ParsedOrder], archive_after: timedelta
-    ) -> None:
+    ) -> dict[str, int]:
         """Merge parsed email updates into local order state."""
         now = datetime.now().astimezone()
+        added_or_updated = 0
         for update in updates:
             existing = self.orders.get(update.order_id, {})
             seen_messages = set(existing.get("seen_messages", []))
             if update.message_id in seen_messages:
                 continue
 
+            added_or_updated += 1
             seen_messages.add(update.message_id)
             record = {
                 **existing,
@@ -58,8 +60,12 @@ class OrderStore:
                 record["delivered_at"] = _serialize_datetime(update.updated_at) or now.isoformat()
             self.orders[update.order_id] = record
 
-        self._archive_delivered(now, archive_after)
+        archived_now = self._archive_delivered(now, archive_after)
         await self.async_save()
+        return {
+            "records_changed": added_or_updated,
+            "records_archived": archived_now,
+        }
 
     def counts(self) -> dict[str, int]:
         """Return counts grouped by source and status."""
@@ -67,10 +73,16 @@ class OrderStore:
             "amazon_active": 0,
             "pharmacy_active": 0,
             "active": 0,
+            "archived": 0,
+            "stored": len(self.orders),
         }
         for order in self.orders.values():
             status = order.get("status")
             source = order.get("source", "amazon")
+            if status == STATUS_ARCHIVED:
+                counts["archived"] += 1
+                counts[f"{source}_archived"] = counts.get(f"{source}_archived", 0) + 1
+                continue
             if status not in ACTIVE_STATUSES:
                 continue
             counts["active"] += 1
@@ -87,7 +99,8 @@ class OrderStore:
             if order.get("status") in ACTIVE_STATUSES
         ]
 
-    def _archive_delivered(self, now: datetime, archive_after: timedelta) -> None:
+    def _archive_delivered(self, now: datetime, archive_after: timedelta) -> int:
+        archived_now = 0
         for order in self.orders.values():
             if order.get("status") != STATUS_DELIVERED:
                 continue
@@ -95,6 +108,8 @@ class OrderStore:
             if delivered_at is not None and now - delivered_at >= archive_after:
                 order["status"] = STATUS_ARCHIVED
                 order["archived_at"] = now.isoformat()
+                archived_now += 1
+        return archived_now
 
 
 def _serializable_update(update: ParsedOrder) -> dict[str, Any]:
