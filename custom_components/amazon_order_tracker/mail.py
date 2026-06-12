@@ -9,8 +9,11 @@ from email.message import Message
 from email.policy import default
 from email.utils import parsedate_to_datetime
 import imaplib
+import logging
 import socket
 from typing import Iterable
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -52,8 +55,9 @@ def test_imap_login(settings: ImapSettings) -> ImapLoginTestResult:
 
     try:
         try:
-            client.login(settings.username, settings.password)
-        except imaplib.IMAP4.error:
+            client.login(settings.username, _normalize_password(settings.password))
+        except imaplib.IMAP4.error as err:
+            LOGGER.warning("Gmail rejected IMAP login for %s: %s", settings.username, err)
             return ImapLoginTestResult(False, "invalid_auth")
 
         try:
@@ -80,7 +84,7 @@ def fetch_candidate_messages(
     criteria = f'(SINCE "{since}")'
 
     with imaplib.IMAP4_SSL(settings.server, settings.port) as client:
-        client.login(settings.username, settings.password)
+        client.login(settings.username, _normalize_password(settings.password))
         client.select(settings.mailbox, readonly=True)
         status, data = client.search(None, criteria)
         if status != "OK" or not data:
@@ -149,3 +153,8 @@ def _decode_part(part: Message) -> str:
         return str(part.get_payload() or "")
     charset = part.get_content_charset() or "utf-8"
     return payload.decode(charset, errors="replace")
+
+
+def _normalize_password(password: str) -> str:
+    """Normalize Google app passwords copied in grouped format."""
+    return "".join(password.split())
