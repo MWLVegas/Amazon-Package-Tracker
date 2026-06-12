@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.4
+
+- Load the integration before the first mailbox scan completes so slow Gmail folders do not cancel setup.
+- Add an IMAP connection timeout.
+
+## 0.1.3
+
+- Add setup guidance explaining that Gmail requires a Google App Password, not the normal Google account password.
+- Clarify the Gmail authentication error message.
+
 ## 0.1.2
 
 - Normalize copied Google app passwords by removing spaces before IMAP login.

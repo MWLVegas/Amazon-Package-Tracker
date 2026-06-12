@@ -42,6 +42,11 @@ class AmazonOrderTrackerCoordinator(DataUpdateCoordinator[dict[str, object]]):
             update_interval=DEFAULT_SCAN_INTERVAL,
         )
 
+    async def async_load_stored_data(self) -> None:
+        """Load persisted orders before the first email scan completes."""
+        await self.store.async_load()
+        self.async_set_updated_data(self._stored_data())
+
     async def _async_update_data(self) -> dict[str, object]:
         data = self.entry.data
         await self.store.async_load()
@@ -73,6 +78,10 @@ class AmazonOrderTrackerCoordinator(DataUpdateCoordinator[dict[str, object]]):
         ]
         await self.store.async_merge_updates(updates, archive_after)
 
+        return self._stored_data()
+
+    def _stored_data(self) -> dict[str, object]:
+        """Return current stored data in coordinator format."""
         return {
             "counts": self.store.counts(),
             "orders": self.store.active_orders(),

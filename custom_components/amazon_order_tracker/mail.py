@@ -14,6 +14,7 @@ import socket
 from typing import Iterable
 
 LOGGER = logging.getLogger(__name__)
+IMAP_TIMEOUT_SECONDS = 30
 
 
 @dataclass(frozen=True)
@@ -49,7 +50,9 @@ class MailMessage:
 def test_imap_login(settings: ImapSettings) -> ImapLoginTestResult:
     """Test connection, login, and mailbox access separately."""
     try:
-        client = imaplib.IMAP4_SSL(settings.server, settings.port)
+        client = imaplib.IMAP4_SSL(
+            settings.server, settings.port, timeout=IMAP_TIMEOUT_SECONDS
+        )
     except (OSError, TimeoutError, socket.gaierror):
         return ImapLoginTestResult(False, "cannot_connect")
 
@@ -83,7 +86,9 @@ def fetch_candidate_messages(
     since = (datetime.now() - timedelta(days=lookback_days)).strftime("%d-%b-%Y")
     criteria = f'(SINCE "{since}")'
 
-    with imaplib.IMAP4_SSL(settings.server, settings.port) as client:
+    with imaplib.IMAP4_SSL(
+        settings.server, settings.port, timeout=IMAP_TIMEOUT_SECONDS
+    ) as client:
         client.login(settings.username, _normalize_password(settings.password))
         client.select(settings.mailbox, readonly=True)
         status, data = client.search(None, criteria)

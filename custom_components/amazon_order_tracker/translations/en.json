@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Amazon Order Tracker",
-        "description": "Connect to Gmail over IMAP and scan Amazon order emails.",
+        "description": "Connect to Gmail over IMAP and scan Amazon order emails. The password below is NOT your normal Google password. Use a Google App Password created from your Google Account security settings. Also make sure IMAP is enabled in Gmail under Settings > See all settings > Forwarding and POP/IMAP.",
         "data": {
           "name": "Name",
           "username": "Gmail address",
@@ -14,12 +14,15 @@
           "lookback_days": "Days of email history to scan",
           "archive_after_hours": "Hours before delivered orders archive",
           "include_pharmacy": "Track pharmacy orders"
+        },
+        "data_description": {
+          "password": "Do not enter your regular Google password. Enter a 16-character Google App Password. Create one from your Google Account security settings after enabling 2-Step Verification."
         }
       }
     },
     "error": {
       "cannot_connect": "E001: Could not reach the IMAP server. Check the server name, port, and network access.",
-      "invalid_auth": "E002: Gmail rejected the email address or app password.",
+      "invalid_auth": "E002: Gmail rejected the login. Use your Gmail address and a Google App Password, not your normal Google password.",
       "mailbox_not_found": "E003: Login worked, but that mailbox/folder could not be opened."
     },
     "abort": {

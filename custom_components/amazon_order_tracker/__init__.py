@@ -15,10 +15,15 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Amazon Order Tracker from a config entry."""
     coordinator = AmazonOrderTrackerCoordinator(hass, entry)
-    await coordinator.async_config_entry_first_refresh()
+    await coordinator.async_load_stored_data()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_create_background_task(
+        hass,
+        coordinator.async_request_refresh(),
+        "amazon_order_tracker_initial_refresh",
+    )
     return True
 
 

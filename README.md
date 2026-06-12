@@ -28,7 +28,15 @@ This integration connects to Gmail over IMAP, scans Amazon order emails, stores 
 
 Use IMAP, not SMTP. SMTP is for sending mail.
 
-For a personal Gmail account, create a Google app password and use:
+For a personal Gmail account, do not use your normal Google password. Create a Google App Password from your Google Account security settings and use that in Home Assistant.
+
+Before adding the integration:
+
+1. Enable 2-Step Verification on your Google account.
+2. Create a Google App Password for this integration.
+3. In Gmail, enable IMAP under **Settings > See all settings > Forwarding and POP/IMAP**.
+
+Then use:
 
 - IMAP server: `imap.gmail.com`
 - Port: `993`
