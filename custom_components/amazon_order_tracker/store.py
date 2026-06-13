@@ -9,7 +9,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-from .const import ACTIVE_STATUSES, STATUS_ARCHIVED, STATUS_DELIVERED
+from .const import ACTIVE_STATUSES, STATUS_ARCHIVED, STATUS_DELIVERED, STATUS_RANK
 from .parser import ParsedOrder
 
 STORAGE_VERSION = 1
@@ -39,25 +39,18 @@ class OrderStore:
         """Merge parsed email updates into local order state."""
         now = datetime.now().astimezone()
         added_or_updated = 0
-        for update in updates:
+        for update in sorted(updates, key=_update_sort_key):
             existing = self.orders.get(update.order_id, {})
             seen_messages = set(existing.get("seen_messages", []))
-            if update.message_id in seen_messages:
-                continue
+            was_seen = update.message_id in seen_messages
 
-            added_or_updated += 1
             seen_messages.add(update.message_id)
-            record = {
-                **existing,
-                **_serializable_update(update),
-                "seen_messages": sorted(seen_messages),
-                "last_subject": update.subject,
-                "last_updated": _serialize_datetime(update.updated_at) or now.isoformat(),
-            }
+            record = self._merge_update(existing, update, now)
+            record["seen_messages"] = sorted(seen_messages)
+            if not was_seen:
+                added_or_updated += 1
             if "created_at" not in record:
                 record["created_at"] = _serialize_datetime(update.updated_at) or now.isoformat()
-            if update.status == STATUS_DELIVERED and "delivered_at" not in record:
-                record["delivered_at"] = _serialize_datetime(update.updated_at) or now.isoformat()
             self.orders[update.order_id] = record
 
         archived_now = self._archive_delivered(now, archive_after)
@@ -66,6 +59,55 @@ class OrderStore:
             "records_changed": added_or_updated,
             "records_archived": archived_now,
         }
+
+    def _merge_update(
+        self,
+        existing: dict[str, Any],
+        update: ParsedOrder,
+        now: datetime,
+    ) -> dict[str, Any]:
+        update_data = _serializable_update(update)
+        update_time = _serialize_datetime(update.updated_at) or now.isoformat()
+
+        if existing.get("status") == STATUS_ARCHIVED:
+            return {
+                **existing,
+                "last_subject": update.subject,
+                "last_updated": max(existing.get("last_updated", ""), update_time),
+            }
+
+        existing_status = str(existing.get("status") or "")
+        existing_rank = STATUS_RANK.get(existing_status, 0)
+        update_rank = STATUS_RANK.get(update.status, 0)
+
+        should_promote = update_rank >= existing_rank
+        if existing_status == STATUS_DELIVERED and update.status != STATUS_DELIVERED:
+            should_promote = False
+        elif not should_promote:
+            existing_time = _parse_datetime(existing.get("last_updated"))
+            parsed_update_time = _parse_datetime(update_time)
+            should_promote = (
+                existing_time is None
+                or parsed_update_time is None
+                or parsed_update_time > existing_time
+            )
+
+        if not should_promote:
+            return {
+                **existing,
+                "last_subject": update.subject,
+                "last_updated": max(existing.get("last_updated", ""), update_time),
+            }
+
+        record = {
+            **existing,
+            **update_data,
+            "last_subject": update.subject,
+            "last_updated": update_time,
+        }
+        if update.status == STATUS_DELIVERED:
+            record["delivered_at"] = update_time
+        return record
 
     def counts(self) -> dict[str, int]:
         """Return counts grouped by source and status."""
@@ -138,3 +180,12 @@ def _parse_datetime(value: str | None) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.astimezone()
     return parsed
+
+
+def _update_sort_key(update: ParsedOrder) -> tuple[datetime, int]:
+    updated_at = update.updated_at
+    if updated_at is None:
+        updated_at = datetime.min
+    elif updated_at.tzinfo is not None:
+        updated_at = updated_at.replace(tzinfo=None)
+    return (updated_at, STATUS_RANK.get(update.status, 0))

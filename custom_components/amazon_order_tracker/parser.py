@@ -72,6 +72,15 @@ def parse_message(message: MailMessage, include_pharmacy: bool) -> ParsedOrder |
     return None
 
 
+def message_status_hint(message: MailMessage) -> str | None:
+    """Return a status hint even when no order number was parsed."""
+    text = _clean_text(f"{message.subject}\n{message.body}").lower()
+    status = _amazon_status(text)
+    if status == STATUS_PENDING:
+        return None
+    return status
+
+
 def _amazon_status(text: str) -> str:
     if "out for delivery" in text:
         return STATUS_OUT_FOR_DELIVERY

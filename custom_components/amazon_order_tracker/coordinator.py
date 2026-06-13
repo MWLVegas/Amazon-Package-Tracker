@@ -24,7 +24,7 @@ from .const import (
     DOMAIN,
 )
 from .mail import ImapSettings, fetch_candidate_messages
-from .parser import parse_message
+from .parser import message_status_hint, parse_message
 from .store import OrderStore
 
 LOGGER = logging.getLogger(__name__)
@@ -78,15 +78,28 @@ class AmazonOrderTrackerCoordinator(DataUpdateCoordinator[dict[str, object]]):
         except Exception as err:
             raise UpdateFailed(f"Could not fetch Gmail messages: {err}") from err
 
-        updates = [
-            parsed
-            for message in messages
-            if (parsed := parse_message(message, include_pharmacy)) is not None
-        ]
+        updates = []
+        status_emails_without_order = 0
+        delivered_emails_without_order = 0
+        for message in messages:
+            parsed = parse_message(message, include_pharmacy)
+            if parsed is not None:
+                updates.append(parsed)
+                continue
+
+            hint = message_status_hint(message)
+            if hint is None:
+                continue
+            status_emails_without_order += 1
+            if hint == "delivered":
+                delivered_emails_without_order += 1
+
         merge_stats = await self.store.async_merge_updates(updates, archive_after)
         self.last_scan = {
             "emails_scanned": len(messages),
             "updates_parsed": len(updates),
+            "status_emails_without_order": status_emails_without_order,
+            "delivered_emails_without_order": delivered_emails_without_order,
             **merge_stats,
         }
 

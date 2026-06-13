@@ -93,6 +93,16 @@ SENSORS: tuple[AmazonOrderSensorDescription, ...] = (
         name="Archived Last Scan",
         count_key="records_archived",
     ),
+    AmazonOrderSensorDescription(
+        key="status_emails_without_order",
+        name="Status Emails Without Order",
+        count_key="status_emails_without_order",
+    ),
+    AmazonOrderSensorDescription(
+        key="delivered_emails_without_order",
+        name="Delivered Emails Without Order",
+        count_key="delivered_emails_without_order",
+    ),
 )
 
 
@@ -147,6 +157,8 @@ class AmazonOrderCountSensor(
                 "emails_scanned",
                 "updates_parsed",
                 "records_archived",
+                "status_emails_without_order",
+                "delivered_emails_without_order",
             }:
                 return {"last_scan": self.coordinator.data.get("last_scan", {})}
             return {}

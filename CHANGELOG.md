@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6
+
+- Re-evaluate parsed messages during each scan so state fixes can correct existing stored orders.
+- Prevent lower-priority shipment updates from regressing delivered or archived orders.
+- Add diagnostics for status emails that do not include a parseable order number.
+
 ## 0.1.5
 
 - Add diagnostic sensors for stored, archived, scanned, parsed, and newly archived records.
