@@ -92,18 +92,18 @@ class AmazonOrderTrackerOptionsFlow(config_entries.OptionsFlow):
     """Handle Amazon Order Tracker options."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage integration options."""
         errors: dict[str, str] = {}
-        settings = get_entry_settings(self.config_entry)
-        suggested_values = _options_defaults(self.config_entry, user_input)
+        settings = get_entry_settings(self._config_entry)
+        suggested_values = _options_defaults(self._config_entry, user_input)
 
         if user_input is not None:
-            options = dict(self.config_entry.options)
+            options = dict(self._config_entry.options)
             effective_input = dict(user_input)
             password = str(effective_input.get(CONF_PASSWORD, "")).strip()
             if password:
@@ -134,7 +134,7 @@ class AmazonOrderTrackerOptionsFlow(config_entries.OptionsFlow):
                 else:
                     options.pop(CONF_RESET_SCAN_FROM, None)
 
-                if _imap_options_changed(self.config_entry, effective_input):
+                if _imap_options_changed(self._config_entry, effective_input):
                     result = await self.hass.async_add_executor_job(
                         test_imap_login,
                         ImapSettings(
@@ -150,7 +150,7 @@ class AmazonOrderTrackerOptionsFlow(config_entries.OptionsFlow):
 
                 if not errors:
                     return self.async_create_entry(title="", data=options)
-                suggested_values = _options_defaults(self.config_entry, effective_input)
+                suggested_values = _options_defaults(self._config_entry, effective_input)
 
         return self.async_show_form(
             step_id="init",
