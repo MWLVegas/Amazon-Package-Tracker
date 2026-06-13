@@ -15,6 +15,8 @@ from typing import Iterable, NamedTuple
 
 LOGGER = logging.getLogger(__name__)
 IMAP_TIMEOUT_SECONDS = 30
+MAX_MESSAGES_PER_PASS = 75
+MAX_UNKNOWN_MESSAGES_PER_PASS = 25
 
 
 @dataclass(frozen=True)
@@ -167,7 +169,7 @@ def _search_pass(
     if use_gmail_search:
         message_nums = _gmail_raw_search(client, pass_name, since)
         if message_nums:
-            return SearchResult(message_nums, True)
+            return SearchResult(_limit_message_nums(pass_name, message_nums), True)
 
     found: set[bytes] = set()
     for field, term in IMAP_PASS_SEARCH_TERMS[pass_name]:
@@ -175,7 +177,10 @@ def _search_pass(
         if status != "OK" or not data:
             continue
         found.update(data[0].split())
-    return SearchResult(sorted(found, key=lambda value: int(value)), False)
+    return SearchResult(
+        _limit_message_nums(pass_name, sorted(found, key=lambda value: int(value))),
+        False,
+    )
 
 
 def _gmail_raw_search(
@@ -213,6 +218,23 @@ def _fetch_messages(
             if parsed is not None:
                 messages.append(parsed)
     return messages
+
+
+def _limit_message_nums(pass_name: str, message_nums: list[bytes]) -> list[bytes]:
+    """Limit downloads to the newest likely matches so scans stay bounded."""
+    limit = (
+        MAX_UNKNOWN_MESSAGES_PER_PASS
+        if pass_name == "unknown"
+        else MAX_MESSAGES_PER_PASS
+    )
+    if len(message_nums) > limit:
+        LOGGER.warning(
+            "Amazon Order Tracker %s scan matched %s messages; fetching newest %s",
+            pass_name,
+            len(message_nums),
+            limit,
+        )
+    return message_nums[-limit:]
 
 
 def _is_gmail_server(server: str) -> bool:

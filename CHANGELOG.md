@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.8
+
+- Bound IMAP message downloads per scan pass to avoid overwhelming Home Assistant.
+- Avoid launching the first Gmail scan during Home Assistant startup.
+- Fix options flow entry handling for newer Home Assistant releases.
+
 ## 0.1.7
 
 - Replace broad mailbox parsing with targeted order event scan passes.
