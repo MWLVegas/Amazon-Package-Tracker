@@ -18,6 +18,7 @@ from .const import (
     CONF_LOOKBACK_DAYS,
     CONF_MAILBOX,
     CONF_PASSWORD,
+    CONF_RESET_SCAN_FROM,
     CONF_USERNAME,
     DEFAULT_ARCHIVE_AFTER_HOURS,
     DEFAULT_IMAP_PORT,
@@ -66,6 +67,51 @@ class AmazonOrderTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    @staticmethod
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Create the options flow."""
+        return AmazonOrderTrackerOptionsFlow(config_entry)
+
+
+class AmazonOrderTrackerOptionsFlow(config_entries.OptionsFlow):
+    """Handle Amazon Order Tracker options."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage integration options."""
+        errors: dict[str, str] = {}
+        options = dict(self.config_entry.options)
+
+        if user_input is not None:
+            reset_scan_from = str(user_input.get(CONF_RESET_SCAN_FROM, "")).strip()
+            if reset_scan_from and not _valid_date(reset_scan_from):
+                errors[CONF_RESET_SCAN_FROM] = "invalid_date"
+            else:
+                if reset_scan_from:
+                    options[CONF_RESET_SCAN_FROM] = reset_scan_from
+                else:
+                    options.pop(CONF_RESET_SCAN_FROM, None)
+                return self.async_create_entry(title="", data=options)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_RESET_SCAN_FROM,
+                        default=options.get(CONF_RESET_SCAN_FROM, ""),
+                    ): str,
+                }
+            ),
+            errors=errors,
+        )
+
 
 def _schema_with_defaults(values: dict[str, Any]) -> vol.Schema:
     """Build the setup form, preserving values after validation errors."""
@@ -102,3 +148,14 @@ def _schema_with_defaults(values: dict[str, Any]) -> vol.Schema:
             ): bool,
         }
     )
+
+
+def _valid_date(value: str) -> bool:
+    """Return whether a value is a YYYY-MM-DD date."""
+    try:
+        from datetime import date
+
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True

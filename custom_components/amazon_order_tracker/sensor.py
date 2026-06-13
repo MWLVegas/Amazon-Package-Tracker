@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     DOMAIN,
     STATUS_ARCHIVED,
+    STATUS_CANCELLED,
     STATUS_DELAYED,
     STATUS_DELIVERED,
     STATUS_LABELS,
@@ -64,6 +65,11 @@ SENSORS: tuple[AmazonOrderSensorDescription, ...] = (
         count_key=STATUS_DELAYED,
     ),
     AmazonOrderSensorDescription(
+        key="cancelled",
+        name=STATUS_LABELS[STATUS_CANCELLED],
+        count_key=STATUS_CANCELLED,
+    ),
+    AmazonOrderSensorDescription(
         key="pharmacy_active",
         name="Pharmacy Active Orders",
         count_key="pharmacy_active",
@@ -94,14 +100,34 @@ SENSORS: tuple[AmazonOrderSensorDescription, ...] = (
         count_key="records_archived",
     ),
     AmazonOrderSensorDescription(
-        key="status_emails_without_order",
-        name="Status Emails Without Order",
-        count_key="status_emails_without_order",
+        key="records_stale_archived",
+        name="Stale Archived Last Scan",
+        count_key="records_stale_archived",
     ),
     AmazonOrderSensorDescription(
-        key="delivered_emails_without_order",
-        name="Delivered Emails Without Order",
-        count_key="delivered_emails_without_order",
+        key="ordered_messages_found",
+        name="Ordered Messages Found",
+        count_key="ordered_messages_found",
+    ),
+    AmazonOrderSensorDescription(
+        key="delivered_messages_found",
+        name="Delivered Messages Found",
+        count_key="delivered_messages_found",
+    ),
+    AmazonOrderSensorDescription(
+        key="problem_messages_found",
+        name="Problem Messages Found",
+        count_key="problem_messages_found",
+    ),
+    AmazonOrderSensorDescription(
+        key="shipped_messages_found",
+        name="Shipped Messages Found",
+        count_key="shipped_messages_found",
+    ),
+    AmazonOrderSensorDescription(
+        key="unknown_order_messages_found",
+        name="Unknown Order Messages Found",
+        count_key="unknown_order_messages_found",
     ),
 )
 
@@ -157,8 +183,12 @@ class AmazonOrderCountSensor(
                 "emails_scanned",
                 "updates_parsed",
                 "records_archived",
-                "status_emails_without_order",
-                "delivered_emails_without_order",
+                "records_stale_archived",
+                "ordered_messages_found",
+                "delivered_messages_found",
+                "problem_messages_found",
+                "shipped_messages_found",
+                "unknown_order_messages_found",
             }:
                 return {"last_scan": self.coordinator.data.get("last_scan", {})}
             return {}

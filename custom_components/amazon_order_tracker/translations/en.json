@@ -28,5 +28,22 @@
     "abort": {
       "already_configured": "This Gmail account is already configured."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Amazon Order Tracker Options",
+        "description": "Set a one-time scan reset date if you want the next successful scan to start from a specific day. Leave blank to keep using the saved checkpoint.",
+        "data": {
+          "reset_scan_from": "One-time scan reset date"
+        },
+        "data_description": {
+          "reset_scan_from": "Optional. Use YYYY-MM-DD. The integration clears this after the next successful scan."
+        }
+      }
+    },
+    "error": {
+      "invalid_date": "Use YYYY-MM-DD."
+    }
   }
 }

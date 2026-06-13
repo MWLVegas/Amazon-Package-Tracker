@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7
+
+- Replace broad mailbox parsing with targeted order event scan passes.
+- Add persistent scan checkpoint with one-time reset date option.
+- Add unknown-order diagnostics and stale active order archiving.
+
 ## 0.1.6
 
 - Re-evaluate parsed messages during each scan so state fixes can correct existing stored orders.
