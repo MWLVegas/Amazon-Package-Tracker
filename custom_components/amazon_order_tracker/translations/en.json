@@ -33,17 +33,52 @@
     "step": {
       "init": {
         "title": "Amazon Order Tracker Options",
-        "description": "Set a one-time scan reset date if you want the next successful scan to start from a specific day. Leave blank to keep using the saved checkpoint.",
+        "description": "Edit runtime settings for this Amazon Order Tracker entry. Leave App password blank to keep the currently saved password. Set a one-time scan reset date only if you want the next successful scan to start from a specific day.",
         "data": {
+          "username": "Gmail address",
+          "password": "App password",
+          "imap_server": "IMAP server",
+          "imap_port": "IMAP port",
+          "mailbox": "Mailbox",
+          "lookback_days": "Days of email history to scan",
+          "archive_after_hours": "Hours before delivered orders archive",
+          "include_pharmacy": "Track pharmacy orders",
+          "scan_overlap_hours": "Scan overlap hours",
+          "stale_active_days": "Days before stale active orders archive",
           "reset_scan_from": "One-time scan reset date"
         },
         "data_description": {
+          "password": "Leave blank to keep the currently saved app password. Enter a new Google App Password only when you want to replace it.",
+          "scan_overlap_hours": "When a checkpoint exists, the next scan starts this many hours before the checkpoint to avoid missing late-arriving email updates.",
+          "stale_active_days": "Active orders with no updates for this many days are archived as stale.",
           "reset_scan_from": "Optional. Use YYYY-MM-DD. The integration clears this after the next successful scan."
         }
       }
     },
     "error": {
       "invalid_date": "Use YYYY-MM-DD."
+    }
+  },
+  "services": {
+    "reset_scan_checkpoint": {
+      "name": "Reset scan checkpoint",
+      "description": "Clear only the saved scan checkpoint for one Amazon Order Tracker entry. Stored orders and seen message data are preserved.",
+      "fields": {
+        "config_entry": {
+          "name": "Config entry",
+          "description": "The Amazon Order Tracker entry to reset."
+        }
+      }
+    },
+    "rebuild_order_state": {
+      "name": "Rebuild order state",
+      "description": "Clear stored orders, seen message tracking, unknown diagnostics, and the scan checkpoint for one Amazon Order Tracker entry.",
+      "fields": {
+        "config_entry": {
+          "name": "Config entry",
+          "description": "The Amazon Order Tracker entry to rebuild."
+        }
+      }
     }
   }
 }

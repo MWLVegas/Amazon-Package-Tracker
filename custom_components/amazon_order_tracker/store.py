@@ -11,7 +11,6 @@ from homeassistant.helpers.storage import Store
 
 from .const import (
     ACTIVE_STATUSES,
-    DEFAULT_STALE_ACTIVE_DAYS,
     STATUS_ARCHIVED,
     STATUS_CANCELLED,
     STATUS_DELIVERED,
@@ -31,6 +30,8 @@ class OrderStore:
         )
         self.orders: dict[str, dict[str, Any]] = {}
         self.last_successful_scan_at: str | None = None
+        self.reset_checkpoint_last_run: str | None = None
+        self.rebuild_last_run: str | None = None
 
     async def async_load(self) -> None:
         """Load stored orders."""
@@ -39,6 +40,10 @@ class OrderStore:
         self.last_successful_scan_at = (
             data.get("last_successful_scan_at") if data else None
         )
+        self.reset_checkpoint_last_run = (
+            data.get("reset_checkpoint_last_run") if data else None
+        )
+        self.rebuild_last_run = data.get("rebuild_last_run") if data else None
 
     async def async_save(self) -> None:
         """Save stored orders."""
@@ -46,6 +51,8 @@ class OrderStore:
             {
                 "orders": self.orders,
                 "last_successful_scan_at": self.last_successful_scan_at,
+                "reset_checkpoint_last_run": self.reset_checkpoint_last_run,
+                "rebuild_last_run": self.rebuild_last_run,
             }
         )
 
@@ -53,6 +60,7 @@ class OrderStore:
         self,
         updates: list[ParsedOrderEvent],
         archive_after: timedelta,
+        stale_active_days: int,
         successful_scan_at: datetime | None = None,
     ) -> dict[str, int]:
         """Merge parsed email updates into local order state."""
@@ -79,7 +87,7 @@ class OrderStore:
             self.orders[update.order_id] = record
 
         archived_now = self._archive_delivered(now, archive_after)
-        stale_archived_now = self._archive_stale_active(now)
+        stale_archived_now = self._archive_stale_active(now, stale_active_days)
         if successful_scan_at is not None:
             self.set_last_successful_scan(successful_scan_at)
         try:
@@ -93,6 +101,19 @@ class OrderStore:
             "records_stale_archived": stale_archived_now,
             "diagnostic_updates": diagnostic_updates,
         }
+
+    async def async_reset_checkpoint(self) -> None:
+        """Clear only the saved scan checkpoint and preserve order state."""
+        self.last_successful_scan_at = None
+        self.reset_checkpoint_last_run = datetime.now().astimezone().isoformat()
+        await self.async_save()
+
+    async def async_rebuild(self) -> None:
+        """Clear stored order state, diagnostics, seen messages, and checkpoint."""
+        self.orders = {}
+        self.last_successful_scan_at = None
+        self.rebuild_last_run = datetime.now().astimezone().isoformat()
+        await self.async_save()
 
     def _merge_update(
         self,
@@ -225,9 +246,9 @@ class OrderStore:
                 archived_now += 1
         return archived_now
 
-    def _archive_stale_active(self, now: datetime) -> int:
+    def _archive_stale_active(self, now: datetime, stale_active_days: int) -> int:
         archived_now = 0
-        stale_after = timedelta(days=DEFAULT_STALE_ACTIVE_DAYS)
+        stale_after = timedelta(days=stale_active_days)
         for order in self.orders.values():
             if order.get("status") not in ACTIVE_STATUSES:
                 continue

@@ -1,0 +1,23 @@
+reset_scan_checkpoint:
+  name: Reset scan checkpoint
+  description: Clear only the saved scan checkpoint for one Amazon Order Tracker entry. Stored orders and seen message data are preserved.
+  fields:
+    config_entry:
+      name: Config entry
+      description: The Amazon Order Tracker entry to reset.
+      required: true
+      selector:
+        config_entry:
+          integration: amazon_order_tracker
+
+rebuild_order_state:
+  name: Rebuild order state
+  description: Clear stored orders, seen message tracking, unknown diagnostics, and the scan checkpoint for one Amazon Order Tracker entry.
+  fields:
+    config_entry:
+      name: Config entry
+      description: The Amazon Order Tracker entry to rebuild.
+      required: true
+      selector:
+        config_entry:
+          integration: amazon_order_tracker

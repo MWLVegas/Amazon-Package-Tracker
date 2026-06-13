@@ -15,6 +15,8 @@ CONF_LOOKBACK_DAYS = "lookback_days"
 CONF_ARCHIVE_AFTER_HOURS = "archive_after_hours"
 CONF_INCLUDE_PHARMACY = "include_pharmacy"
 CONF_RESET_SCAN_FROM = "reset_scan_from"
+CONF_SCAN_OVERLAP_HOURS = "scan_overlap_hours"
+CONF_STALE_ACTIVE_DAYS = "stale_active_days"
 
 DEFAULT_IMAP_SERVER = "imap.gmail.com"
 DEFAULT_IMAP_PORT = 993
@@ -24,6 +26,10 @@ DEFAULT_ARCHIVE_AFTER_HOURS = 48
 DEFAULT_SCAN_INTERVAL = timedelta(minutes=30)
 DEFAULT_SCAN_OVERLAP_HOURS = 12
 DEFAULT_STALE_ACTIVE_DAYS = 60
+
+SERVICE_RESET_SCAN_CHECKPOINT = "reset_scan_checkpoint"
+SERVICE_REBUILD_ORDER_STATE = "rebuild_order_state"
+ATTR_CONFIG_ENTRY = "config_entry"
 
 STATUS_PENDING = "pending_shipping"
 STATUS_SHIPPED = "shipped"
