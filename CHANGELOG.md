@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.9
+
+- Fetch only a bounded prefix of each matching email instead of full RFC822 payloads.
+- Cap decoded message text size to avoid large Amazon HTML emails spiking Home Assistant memory.
+- Reduce per-scan message limits for safer polling.
+
 ## 0.1.8
 
 - Bound IMAP message downloads per scan pass to avoid overwhelming Home Assistant.

@@ -11,12 +11,14 @@ from email.utils import parsedate_to_datetime
 import imaplib
 import logging
 import socket
-from typing import Iterable, NamedTuple
+from typing import NamedTuple
 
 LOGGER = logging.getLogger(__name__)
 IMAP_TIMEOUT_SECONDS = 30
-MAX_MESSAGES_PER_PASS = 75
-MAX_UNKNOWN_MESSAGES_PER_PASS = 25
+MAX_MESSAGES_PER_PASS = 25
+MAX_UNKNOWN_MESSAGES_PER_PASS = 10
+MAX_FETCH_BYTES = 65536
+MAX_BODY_CHARS = 30000
 
 
 @dataclass(frozen=True)
@@ -204,11 +206,16 @@ def _fetch_messages(
 ) -> list[MailMessage]:
     """Fetch and parse message payloads for IMAP message ids or UIDs."""
     messages: list[MailMessage] = []
+    fetch_parts = f"(BODY.PEEK[]<0.{MAX_FETCH_BYTES}>)"
     for message_num in message_nums:
-        if use_uid:
-            status, fetched = client.uid("FETCH", message_num, "(RFC822)")
-        else:
-            status, fetched = client.fetch(message_num, "(RFC822)")
+        try:
+            if use_uid:
+                status, fetched = client.uid("FETCH", message_num, fetch_parts)
+            else:
+                status, fetched = client.fetch(message_num, fetch_parts)
+        except imaplib.IMAP4.error as err:
+            LOGGER.warning("Skipping IMAP message fetch after server error: %s", err)
+            continue
         if status != "OK":
             continue
         for part in fetched:
@@ -243,12 +250,13 @@ def _is_gmail_server(server: str) -> bool:
 
 
 def _parse_message(raw_message: bytes) -> MailMessage | None:
+    raw_message = raw_message[:MAX_FETCH_BYTES]
     msg = message_from_bytes(raw_message, policy=default)
     message_id = str(msg.get("Message-ID") or "")
     subject = str(msg.get("Subject") or "")
     sender = str(msg.get("From") or "")
     parsed_date = _parse_message_date(str(msg.get("Date") or ""))
-    body = "\n".join(_message_text_parts(msg))
+    body = _message_text(msg)
 
     if not message_id or not body:
         return None
@@ -271,7 +279,11 @@ def _parse_message_date(value: str) -> datetime | None:
         return None
 
 
-def _message_text_parts(msg: Message) -> Iterable[str]:
+def _message_text(msg: Message) -> str:
+    """Return bounded text from useful message parts."""
+    chunks: list[str] = []
+    remaining = MAX_BODY_CHARS
+
     if msg.is_multipart():
         for part in msg.walk():
             content_type = part.get_content_type()
@@ -279,18 +291,25 @@ def _message_text_parts(msg: Message) -> Iterable[str]:
             if "attachment" in disposition:
                 continue
             if content_type in {"text/plain", "text/html"}:
-                yield _decode_part(part)
-        return
+                text = _decode_part(part, remaining)
+                if text:
+                    chunks.append(text)
+                    remaining -= len(text)
+                if remaining <= 0:
+                    break
+        return "\n".join(chunks)[:MAX_BODY_CHARS]
 
-    yield _decode_part(msg)
+    return _decode_part(msg, remaining)[:MAX_BODY_CHARS]
 
 
-def _decode_part(part: Message) -> str:
+def _decode_part(part: Message, limit: int) -> str:
+    if limit <= 0:
+        return ""
     payload = part.get_payload(decode=True)
     if payload is None:
-        return str(part.get_payload() or "")
+        return str(part.get_payload() or "")[:limit]
     charset = part.get_content_charset() or "utf-8"
-    return payload.decode(charset, errors="replace")
+    return payload[:MAX_FETCH_BYTES].decode(charset, errors="replace")[:limit]
 
 
 def _normalize_password(password: str) -> str:
